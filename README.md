@@ -75,7 +75,7 @@ react whenever config-run(Test1Config, :file<examples/test1.rakuconfig>, :watch)
 Your `whenever` will receive an object like this:
 
 ```raku
-Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbase => Str))
+Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => Str))
 ```
 
 And if you want to change your configuration to populate the DB config, you can do that with something like this:
