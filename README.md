@@ -20,6 +20,27 @@ class Test1Config {
     has Int $.c = $!b * 3;
 }
 
+say await config-run(Test1Config, :file<examples/test1.rakuconfig>)
+```
+
+This, with that configuration, will print:
+
+
+```raku
+Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42)
+```
+
+But you could also make it reload if the file changes:
+
+```raku
+use Configuration;
+
+class Test1Config {
+    has Int $.a;
+    has Int $.b = $!a * 2;
+    has Int $.c = $!b * 3;
+}
+
 react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :signal(SIGUSR1)) {
     say "Configuration changed: { .raku }";
 }
@@ -42,6 +63,7 @@ react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :watch) {
 }
 ```
 
+And it will reload whenever the file changes.
 The `whenever`, with the current configuration, will receive this object:
 
 ```raku
