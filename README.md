@@ -48,7 +48,7 @@ The `whenever`, with the current configuration, will receive this object:
 Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42)
 ```
 
-It your code is changed to something like this:
+If your code is changed to something like this:
 
 ```raku
 use Configuration;
