@@ -1,0 +1,17 @@
+{
+  "auth": "zef:FCO",
+  "build-depends": [
+  ],
+  "depends": [
+  ],
+  "description": "A brand new and very nice module",
+  "name": "Configuration",
+  "provides": {
+    "Configuration": "lib/Configuration.rakumod"
+  },
+  "resources": [
+  ],
+  "test-depends": [
+  ],
+  "version": "0.0.1"
+}

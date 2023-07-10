@@ -1,0 +1,7 @@
+config {
+    .a = 1;
+    .c = 42;
+    .db: {
+        .dbname = "my-database";
+    }
+}
