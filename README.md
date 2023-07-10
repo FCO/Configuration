@@ -66,7 +66,7 @@ class Test1Config {
     has DBConfig $.db .= new;
 }
 
-react whenever config-run(Test1Config, :file<examples/test1.rakuconfig>, :watch) {
+react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :watch) {
     say "Configuration changed: { .raku }";
 }
 
