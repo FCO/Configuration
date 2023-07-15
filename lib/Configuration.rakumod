@@ -23,6 +23,11 @@ role Generator[::T $builder] {
     method gen($root) {
         # return sub config(&block:(T)) {
         return sub config(&block) { # Should it be typed?
+            CATCH {
+                default {
+                    note "Error on configuration file: $_";
+                }
+            }
             my %*DATA;
             my %*ROOT := %*DATA;
             block $builder, |choose-pars(&block, :root(%*DATA));
