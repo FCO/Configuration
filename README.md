@@ -1,47 +1,67 @@
 # Example
 
+
+For defining what classes to use as configuration, you can do something like:
+
+## Configuration definition (Test1Config.pm)
+
+```raku
+use v6.d;
+use Configuration;
+
+class RootConfig does Configuration::Node {
+    has Int      $.a;
+    has Int      $.b      = $!a * 2;
+    has Int      $.c      = $!b * 3;
+}
+
+sub EXPORT {
+    generate-exports RootConfig
+}
+```
+
+Then, for using that to write a configuration, it's just question of:
+
 ## Configuration (`my-conf.rakuconfig`)
 
 ```raku
+use Test1Config;
+
 config {
     .a = 1;
     .c = 42;
 }
 ```
 
+It uses the `config` function exported by the module created before
+that waits for a block that will expect a builder for the configured
+class as the first parameter.
+
 ## Program using the configuration:
 
 ```raku
-use Configuration;
+use Test1Config;
 
-class Test1Config {
-    has Int $.a;
-    has Int $.b = $!a * 2;
-    has Int $.c = $!b * 3;
-}
-
-say await config-run(Test1Config, :file<examples/test1.rakuconfig>)
+say await config-run :file<examples/test1.rakuconfig>
 ```
+
+On your software you will use the same module where you defined the
+configuration, and use it's exported functions to the the populated
+configuration class object.
 
 This, with that configuration, will print:
 
 
 ```raku
-Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42)
+Test1Config.new(a => 1, b => 2, c => 42)
 ```
 
 But you could also make it reload if the file changes:
 
 ```raku
-use Configuration;
+use Test1Config;
 
-class Test1Config {
-    has Int $.a;
-    has Int $.b = $!a * 2;
-    has Int $.c = $!b * 3;
-}
-
-react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :signal(SIGUSR1)) {
+react whenever config-run :file<./my-conf.rakuconfig>, :signal(SIGUSR1) {
     say "Configuration changed: { .raku }";
 }
 ```
@@ -50,15 +70,9 @@ The whenever will be called every time the configuration change and SIGUSR1 is s
 It also can watch the configuration file:
 
 ```raku
-use Configuration;
+use Test1Config;
 
-class Test1Config {
-    has Int $.a;
-    has Int $.b = $!a * 2;
-    has Int $.c = $!b * 3;
-}
-
-react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :watch) {
+react whenever config-run :file<./my-conf.rakuconfig>, :watch {
     say "Configuration changed: { .raku }";
 }
 ```
@@ -67,29 +81,29 @@ And it will reload whenever the file changes.
 The `whenever`, with the current configuration, will receive this object:
 
 ```raku
-Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42)
+Test1Config.new(a => 1, b => 2, c => 42)
 ```
 
-If your code is changed to something like this:
+If your config declaration changed to something like this:
 
 ```raku
 use Configuration;
 
-class DBConfig {
+class DBConfig does Configuration::Node {
     has Str $.host = 'localhost';
     has Int $.port = 5432;
     has Str $.dbname;
 }
 
-class Test1Config {
+class RootConfig does Configuration::Node {
     has Int $.a;
     has Int $.b = $!a * 2;
     has Int $.c = $!b * 3;
     has DBConfig $.db .= new;
 }
 
-react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :watch) {
-    say "Configuration changed: { .raku }";
+sub EXPORT {
+    generate-exports RootConfig
 }
 
 ```
@@ -97,7 +111,7 @@ react whenever config-run(Test1Config, :file<./my-conf.rakuconfig>, :watch) {
 Your `whenever` will receive an object like this:
 
 ```raku
-Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => Str))
+RootConfig.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => Str))
 ```
 
 And if you want to change your configuration to populate the DB config, you can do that with something like this:
@@ -115,16 +129,33 @@ config {
 And it will generate the object:
 
 ```raku
-Test1Config+{Configuration::Node}.new(a => 1, b => 2, c => 42, db => DBConfig+{Configuration::Node}.new(host => "localhost", port => 5432, dbname => "my-database"))
+Test1Config.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => "my-database"))
 ```
 
 An example with Cro could look like this:
 
+## Config Declaration (ServerConfig.rakumod):
+
+```raku
+use v6.d;
+use Configuration;
+
+class ServerConfig does Configuration::Node {
+    has Str $.host = 'localhost';
+    has Int $.port = 80;
+}
+
+sub EXPORT {
+    generate-exports ServerConfig;
+}
+```
+
+And the code could look something like this:
+
 ```raku
 use Cro::HTTP::Router;
 use Cro::HTTP::Server;
-
-use Configuration;
+use ServerConfig;
 
 my $application = route {
     get -> 'greet', $name {
@@ -132,14 +163,9 @@ my $application = route {
     }
 }
 
-class ServerConfig {
-    has Str $.host = 'localhost';
-    has Int $.port = 80;
-}
-
 my Cro::Service $server;
 react {
-    whenever config-run(ServerConfig, :file<examples/cro.rakuconfig>, :watch) -> $config {
+    whenever config-run :file<examples/cro.rakuconfig>, :watch -> $config {
         my $old = $server;
         $server = Cro::HTTP::Server.new:
                   :host($config.host), :port($config.port), :$application;

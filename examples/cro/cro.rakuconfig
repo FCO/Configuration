@@ -1,3 +1,4 @@
+use ServerConfig;
 config {
     .port = 3000;
 }

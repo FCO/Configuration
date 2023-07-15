@@ -1,17 +1,16 @@
 {
-  "auth": "zef:FCO",
-  "build-depends": [
-  ],
-  "depends": [
-  ],
-  "description": "A brand new and very nice module",
   "name": "Configuration",
+  "description": "A brand new and very nice module",
+  "version": "0.0.1",
+  "auth": "zef:FCO",
+  "depends": [],
+  "build-depends": [],
+  "test-depends": [],
   "provides": {
-    "Configuration": "lib/Configuration.rakumod"
+    "Configuration": "lib/Configuration.rakumod",
+    "Configuration::Node": "lib/Configuration/Node.rakumod",
+    "Configuration::Utils": "lib/Configuration/Utils.rakumod"
   },
-  "resources": [
-  ],
-  "test-depends": [
-  ],
-  "version": "0.0.1"
+  "resources": [],
+  "license": "Artistic 2.0"
 }

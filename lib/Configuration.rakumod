@@ -1,53 +1,14 @@
 unit class Configuration;
-
-role Node {
-    method WHICH {
-        ValueObjAt.new:
-        [
-            self.^name,
-            |(self.^attributes.map({ |(.name.substr(2), $_.get_value(self).WHICH) })),
-        ].join: "|"
-    }
-}
-
-class Builder {
-    has $!class is built;
-    has %!data;
-
-    multi method FALLBACK(Str $name, &block) {
-        my $attr = $!class.^attributes.first({ .name.substr(2) eq $name });
-        X::Method::NotFound.new(:method($name)).throw without $attr;
-        my $builder = ::?CLASS.new: :class($attr.type);
-        my %parent := %*DATA;
-        {
-            my %*DATA;
-            block $builder, |choose-pars(&block, :%parent, :root(%*ROOT));
-            %parent{$name} = $attr.type.new(|%*DATA) does Node;
-        }
-    }
-    multi method FALLBACK(Str $name) is rw {
-        Proxy.new:
-            FETCH => -> $ {
-                my $attr = $!class.^attributes.first({ .name.substr(2) eq $name });
-                X::Method::NotFound.new(:method($name)).throw without $attr;
-                %*DATA{$name}
-            },
-            STORE => -> $, \value {
-                my $attr = $!class.^attributes.first({ .name.substr(2) eq $name });
-                X::Method::NotFound.new(:method($name), :typename($!class.^name)).throw without $attr;
-                X::TypeCheck::Assignment.new(got => value, expected => $attr.type).throw
-                  unless value ~~ $attr.type;
-                %*DATA{$name} = value
-            }
-    }
-}
+#use Configuration::Builder;
+use Configuration::Utils;
+use Configuration::Node;
 
 has IO()   $.file;
 has        $.watch;
 has Signal $.signal;;
 has Any:U  $.root is required;
 
-method TWEAK(|) {
+submethod TWEAK(|) {
     $!watch = $!file if $!watch ~~ Bool && $!watch;
 }
 
@@ -58,43 +19,41 @@ method supply-list {
     )
 }
 
-sub choose-pars(&block, :$parent, :$root) {
-    my %pars is Set = &block.signature.params.grep({ .named }).map({ .name.substr(1) });
-    %(
-        |(:$parent if %pars<parent>),
-        |(:$root   if %pars<root>),
-    )
-}
-
-method generate-config {
-    return sub config(&block) {
-        my $builder = Builder.new: :class($!root);
-        my %*DATA;
-        my %*ROOT := %*DATA;
-        block $builder, |choose-pars(&block, :root(%*DATA));
-        $!root.new(|%*DATA) does Node;
+role Generator[::T $builder] {
+    method gen($root) {
+        # return sub config(&block:(T)) {
+        return sub config(&block) { # Should it be typed?
+            my %*DATA;
+            my %*ROOT := %*DATA;
+            block $builder, |choose-pars(&block, :root(%*DATA));
+            $root.new(|%*DATA);
+        }
     }
 }
 
-method conf-from-file {
+method generate-config {
+    my $builder = generate-builder-class $!root;
+    Generator[$builder].gen($!root)
+}
+
+method conf-from-file is hidden-from-backtrace {
     self.conf-from-string($!file.slurp);
 }
 
-method conf-from-string($str) {
-    my &config := self.generate-config;
+method conf-from-string($str) is hidden-from-backtrace {
     use MONKEY-SEE-NO-EVAL;
     EVAL $str;
 }
 
-multi method single-run(Str $code) {
+multi method single-run(Str $code) is hidden-from-backtrace {
     self.conf-from-string($code)
 }
 
-multi method single-run {
+multi method single-run is hidden-from-backtrace {
     self.conf-from-file
 }
 
-multi method run {
+multi method run is hidden-from-backtrace {
     my $old = 0;
     Supply.merge(Supply.from-list([True]), |self.supply-list)
       .map({self.single-run})
@@ -102,16 +61,36 @@ multi method run {
       .do: { $old = $_ }
 }
 
-proto single-config-run(Mu:U, |) is export {*}
+proto single-config-run(Any:U, |) is export is hidden-from-backtrace {*}
 
-multi single-config-run(Mu:U $root, IO() :$file! where *.f) {
+multi single-config-run(Any:U $root, IO() :$file! where *.f) is hidden-from-backtrace {
     ::?CLASS.new(:$root, :$file).single-run
 }
 
-multi single-config-run(Mu:U $root, Str :$code!) {
+multi single-config-run(Any:U $root, Str :$code!) is hidden-from-backtrace {
     ::?CLASS.new(:$root).single-run(:$code)
 }
 
-multi config-run(Mu:U $root, |c) is export {
+multi config-run(Any:U $root, |c) is export is hidden-from-backtrace {
     ::?CLASS.new(:$root, |c).run
+}
+
+sub generate-config(Any:U $root) is export {
+    ::?CLASS.new(:$root).generate-config
+}
+
+sub generate-exports(Any:U $root) is export {
+    Map.new:
+        '&single-config-run' => &single-config-run.assuming($root),
+        '&config-run'        => &config-run.assuming($root),
+#        $root.^name          => $root,
+        '&config'            => generate-config($root),
+        'ConfigClass'        => generate-builder-class($root),
+    ;
+}
+
+sub EXPORT {
+    Map.new:
+        "Configuration"       => Configuration,
+        "Configuration::Node" => Configuration::Node,
 }

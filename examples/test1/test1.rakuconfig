@@ -1,7 +1,10 @@
-config {
+use Test1Config;
+
+config -> ConfigClass $_ {
     .a = 1;
     .c = 42;
     .db: {
         .dbname = "my-database";
     }
+    say .answer += 5;
 }

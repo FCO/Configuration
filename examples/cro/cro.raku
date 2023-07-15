@@ -1,7 +1,8 @@
 use Cro::HTTP::Router;
 use Cro::HTTP::Server;
 
-use Configuration;
+use lib "./examples/cro";
+use ServerConfig;
 
 my $application = route {
     get -> 'greet', $name {
@@ -9,14 +10,9 @@ my $application = route {
     }
 }
 
-class ServerConfig {
-    has Str $.host = 'localhost';
-    has Int $.port = 80;
-}
-
 my Cro::Service $server;
 react {
-    whenever config-run(ServerConfig, :file<examples/cro.rakuconfig>, :watch) -> $config {
+    whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
         my $old = $server;
         $server = Cro::HTTP::Server.new:
                   :host($config.host), :port($config.port), :$application;
