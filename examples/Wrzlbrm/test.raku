@@ -21,5 +21,5 @@ multi MAIN(FilePath :$file = $default-file, Signal :$signal = SIGUSR1) {
     say "wait for signal";
     react whenever config-run :$file, :$signal {
         say "Configuration changed: { .raku }"
-		}
+	}
 }
