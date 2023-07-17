@@ -69,7 +69,7 @@ sub get-nodes(Configuration::Node $root) is export is cached {
     multi take-nodes(Mu) {}
     CATCH { default { note $_ } }
     gather { take-nodes $root }
-        .grep({ .^name })
-        .map({ .^name => $_ })
+        .grep({ .^name && $_ ~~ Configuration::Node })
+        .map({ .^name => generate-builder-class $_ })
         .cache
 }
