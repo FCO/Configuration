@@ -4,6 +4,7 @@
 # any of its exports (not even the config sub).
 # That might be a bug on COMMA.
 use Test1Config;
+use AnotherPlace;
 
 react {
     # Emits when anything changed on the file
@@ -12,24 +13,15 @@ react {
         say "Configuration changed: { .raku }";
     }
     whenever Promise.in: 5 {
-        # Simulate a different place on the code base
-        # probably a different file. But in that case
-        # it would need to `use Test1Config`.
+        # A different place on the code base
+        # It will print averytime there are changes on:
+        # - .a
+        # - .db
+        # - .db.host
         another-place;
     }
     whenever Supply.interval: 5 {
         # Gets the last configuration value
         say "the last config was: ", get-config;
     }
-}
-
-sub another-place {
-    # Emits only when `.a` is changed
-    config-supply(*.a).tap: { say ".a has changed: ", $_ }
-
-    # Emits only when `.db.host` is changed
-    config-supply(*.db.host).tap: { say ".db.host has changed: ", $_ }
-
-    # Emits only when `.db` is changed
-    config-supply(*.db).tap: { say ".db has changed: ", $_ }
 }

@@ -3,6 +3,8 @@ unit class Configuration;
 use Configuration::Utils;
 use Configuration::Node;
 
+my ::?CLASS $obj;
+
 has IO()   $.file;
 has        $.watch;
 has Signal $.signal;
@@ -87,7 +89,7 @@ sub generate-config(Any:U $root) is export {
 }
 
 sub generate-exports(Any:U $root) is export {
-    my $obj = ::?CLASS.new(:$root);
+    $obj //= ::?CLASS.new(:$root);
 
     multi get-supply($obj) {$obj.supply}
     multi get-supply($obj, &selector) {

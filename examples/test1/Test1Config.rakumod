@@ -1,4 +1,5 @@
 use v6.d;
+no precompilation; # TODO: find a way to remove this.
 use Configuration;
 
 class DBConfig does Configuration::Node {
