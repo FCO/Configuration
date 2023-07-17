@@ -6,13 +6,19 @@
 use Test1Config;
 
 react {
+    # Emits when anything changed on the file
+    # I mean the values
     whenever config-run :file<examples/test1/test1.rakuconfig>, :watch {
         say "Configuration changed: { .raku }";
     }
     whenever Promise.in: 5 {
+        # Simulate a different place on the code base
+        # probably a different file. But in that case
+        # it would need to `use Test1Config`.
         another-place;
     }
     whenever Supply.interval: 5 {
+        # Gets the last configuration value
         say "the last config was: ", get-config;
     }
 }
