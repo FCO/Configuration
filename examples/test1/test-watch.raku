@@ -8,10 +8,9 @@ use Test1Config;
 react {
     whenever config-run :file<examples/test1/test1.rakuconfig>, :watch {
         say "Configuration changed: { .raku }";
-        start {
-            await Promise.in: 5;
-            another-place;
-        }
+    }
+    whenever Promise.in: 5 {
+        another-place;
     }
     whenever Supply.interval: 5 {
         say "the last config was: ", get-config;
@@ -19,5 +18,12 @@ react {
 }
 
 sub another-place {
-    config-supply.tap: { say "config supply: ", $_ }
+    # Emits only when `.a` is changed
+    config-supply(*.a).tap: { say ".a has changed: ", $_ }
+
+    # Emits only when `.db.host` is changed
+    config-supply(*.db.host).tap: { say ".db.host has changed: ", $_ }
+
+    # Emits only when `.db` is changed
+    config-supply(*.db).tap: { say ".db has changed: ", $_ }
 }

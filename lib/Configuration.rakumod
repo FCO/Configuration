@@ -88,6 +88,12 @@ sub generate-config(Any:U $root) is export {
 
 sub generate-exports(Any:U $root) is export {
     my $obj = ::?CLASS.new(:$root);
+
+    multi get-supply($obj) {$obj.supply}
+    multi get-supply($obj, &selector) {
+        $obj.supply.map(&selector).squish
+    }
+
     Map.new:
         '&single-config-run' => -> :$file, :$code {
             $obj.single-run:
@@ -111,7 +117,7 @@ sub generate-exports(Any:U $root) is export {
             );
             $obj.run
         },
-        '&config-supply'     => { $obj.supply },
+        '&config-supply'     => -> &selector? { $obj.&get-supply: |($_ with &selector) },
         '&get-config'        => { $obj.current },
         '&config'            => $obj.generate-config,
         'ConfigClass'        => generate-builder-class($root),
