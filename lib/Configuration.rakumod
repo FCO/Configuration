@@ -5,8 +5,10 @@ use Configuration::Node;
 
 has IO()   $.file;
 has        $.watch;
-has Signal $.signal;;
-has Any:U  $.root is required;
+has Signal $.signal;
+has Any:U  $.root   is required;
+has Any    $.current;
+has Supply $.supply;
 
 submethod TWEAK(|) {
     $!watch = $!file if $!watch ~~ Bool && $!watch;
@@ -55,15 +57,15 @@ multi method single-run(Str $code) is hidden-from-backtrace {
 }
 
 multi method single-run is hidden-from-backtrace {
-    self.conf-from-file
+    self.conf-from-file;
 }
 
 multi method run is hidden-from-backtrace {
-    my $old = 0;
-    Supply.merge(Supply.from-list([True]), |self.supply-list)
-      .map({self.single-run})
+    $!supply = Supply.merge(Supply.from-list([True]), |self.supply-list)
+      .map({try self.single-run})
+      .grep(*.defined)
       .squish
-      .do: { $old = $_ }
+      .do: { $!current = $_ }
 }
 
 proto single-config-run(Any:U, |) is export is hidden-from-backtrace {*}
@@ -85,12 +87,35 @@ sub generate-config(Any:U $root) is export {
 }
 
 sub generate-exports(Any:U $root) is export {
+    my $obj = ::?CLASS.new(:$root);
     Map.new:
-        '&single-config-run' => &single-config-run.assuming($root),
-        '&config-run'        => &config-run.assuming($root),
-#        $root.^name          => $root,
-        '&config'            => generate-config($root),
+        '&single-config-run' => -> :$file, :$code {
+            $obj.single-run:
+                    |(:$file with $file),
+                    |(:$code with $code),
+        },
+        '&config-run'        => ->
+            IO()     :$file! where *.e,
+                     :$watch is copy,
+            Signal() :$signal
+        {
+            $watch = $watch
+                ?? $file
+                !! Nil
+                if $watch ~~ Bool;
+
+            $obj .= clone(
+                |(file   => $_ with $file),
+                |(watch  => $_ with $watch),
+                |(signal => $_ with $signal),
+            );
+            $obj.run
+        },
+        '&config-supply'     => { $obj.supply },
+        '&get-config'        => { $obj.current },
+        '&config'            => $obj.generate-config,
         'ConfigClass'        => generate-builder-class($root),
+        |get-nodes($root),
     ;
 }
 

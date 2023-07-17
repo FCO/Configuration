@@ -6,5 +6,5 @@ config -> ConfigClass $_ {
     .db: {
         .dbname = "my-database";
     }
-    say .answer += 5;
+    .answer = 123;
 }

@@ -14,6 +14,11 @@ sub choose-pars(&block, :$parent, :$root) is export {
 sub generate-builder-class(Configuration::Node:U $node) is cached is export {
     my $builder = Metamodel::ClassHOW.new_type: :name($node.^name ~ "Builder");
     $builder.^add_parent: $node;
+    $builder.^add_method: "gist", my method () {
+        join ",\n", do for self.^methods -> &meth {
+            "{ &meth.name } => ???"
+        }
+    };
     for $node.^attributes.grep(*.has_accessor) -> Attribute $attr (::T :$type, |) {
         my $name = $attr.name.substr: 2;
         my $meth = do if $attr.type !~~ Configuration::Node {
@@ -45,4 +50,26 @@ sub generate-builder-class(Configuration::Node:U $node) is cached is export {
     }
     $builder.^compose;
     $builder
+}
+
+sub get-nodes(Configuration::Node $root) is export is cached {
+    multi take-nodes(Configuration::Node $_) {
+        .take;
+        for .^attributes {
+            .type.&take-nodes
+        }
+    }
+    multi take-nodes(@val) { take-nodes @val.of }
+    multi take-nodes(%val) { take-nodes %val.of }
+    multi take-nodes($_) {
+        for .^attributes {
+            .type.&take-nodes
+        }
+    }
+    multi take-nodes(Mu) {}
+    CATCH { default { note $_ } }
+    gather { take-nodes $root }
+        .grep({ .^name })
+        .map({ .^name => $_ })
+        .cache
 }
