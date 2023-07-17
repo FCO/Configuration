@@ -4,6 +4,9 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/lib" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/t" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/Wrzlbrm" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/cro" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/test1" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
