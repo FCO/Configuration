@@ -1,9 +1,6 @@
 unit class Configuration;
-#use Configuration::Builder;
 use Configuration::Utils;
 use Configuration::Node;
-
-my ::?CLASS $obj;
 
 has IO()   $.file;
 has        $.watch;
@@ -35,7 +32,7 @@ role Generator[::T $builder] {
             my %*DATA;
             my %*ROOT := %*DATA;
             block $builder, |choose-pars(&block, :root(%*DATA));
-            $root.new(|%*DATA);
+            $root.new(|%*DATA.Map);
         }
     }
 }
@@ -88,17 +85,17 @@ sub generate-config(Any:U $root) is export {
     ::?CLASS.new(:$root).generate-config
 }
 
-sub generate-exports(Any:U $root) is export {
-    $obj //= ::?CLASS.new(:$root);
+multi get-supply($obj) {$obj.supply}
+multi get-supply($obj, &selector) {
+    $obj.supply.map(&selector).squish
+}
 
-    multi get-supply($obj) {$obj.supply}
-    multi get-supply($obj, &selector) {
-        $obj.supply.map(&selector).squish
-    }
+sub generate-exports(Any:U $root) is export {
+    PROCESS::<$CONFIG-OBJECT> //= ::?CLASS.new(:$root);
 
     Map.new:
         '&single-config-run' => -> :$file, :$code {
-            $obj.single-run:
+            $*CONFIG-OBJECT.single-run:
                     |(:$file with $file),
                     |(:$code with $code),
         },
@@ -112,16 +109,16 @@ sub generate-exports(Any:U $root) is export {
                 !! Nil
                 if $watch ~~ Bool;
 
-            $obj .= clone(
+            $*CONFIG-OBJECT .= clone(
                 |(file   => $_ with $file),
                 |(watch  => $_ with $watch),
                 |(signal => $_ with $signal),
             );
-            $obj.run
+            $*CONFIG-OBJECT.run
         },
-        '&config-supply'     => -> &selector? { $obj.&get-supply: |($_ with &selector) },
-        '&get-config'        => { $obj.current },
-        '&config'            => $obj.generate-config,
+        '&config-supply'     => -> &selector? { $*CONFIG-OBJECT.&get-supply: |($_ with &selector) },
+        '&get-config'        => { $*CONFIG-OBJECT.current },
+        '&config'            => $*CONFIG-OBJECT.generate-config,
         'ConfigClass'        => generate-builder-class($root),
         |get-nodes($root),
     ;

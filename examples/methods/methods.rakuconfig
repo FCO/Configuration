@@ -1,0 +1,7 @@
+use MethodsConfig;
+
+config {
+    .add-rule: "the first rule";
+    .add-rule: "another rule";
+    .add-rule: "last rule";
+}

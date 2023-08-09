@@ -3,7 +3,7 @@ use lib ".";
 use Test1Config;
 
 subset FilePath of Str where *.IO.f;
-my FilePath $default-file = "./test1.rakuconfig";
+my FilePath $default-file = "examples/Wrzlbrm/test1.rakuconfig";
 
 multi MAIN(FilePath :$file = $default-file, Bool :single($)! where *.so) {
     say "single run";
