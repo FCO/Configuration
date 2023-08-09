@@ -43,10 +43,20 @@ method generate-config {
 }
 
 method conf-from-file is hidden-from-backtrace {
-    self.conf-from-string($!file.slurp);
+    CATCH {
+        default {
+            warn "Error loading file $!file: $_"
+        }
+    }
+    EVALFILE $!file
 }
 
 method conf-from-string($str) is hidden-from-backtrace {
+    CATCH {
+        default {
+            warn "Error loading configuration: $_"
+        }
+    }
     use MONKEY-SEE-NO-EVAL;
     EVAL $str;
 }
@@ -100,7 +110,7 @@ sub generate-exports(Any:U $root) is export {
                     |(:$code with $code),
         },
         '&config-run'        => ->
-            IO()     :$file! where *.e,
+            IO()     :$file! where { .e || fail "File $_ does not exist" },
                      :$watch is copy,
             Signal() :$signal
         {
