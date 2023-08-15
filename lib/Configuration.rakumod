@@ -10,7 +10,7 @@ has Any    $.current;
 has Supply $.supply;
 
 submethod TWEAK(|) {
-    $!watch = $!file if $!watch ~~ Bool && $!watch;
+    $!watch = $!file if $!file && $!watch ~~ Bool && $!watch;
 }
 
 method supply-list {
@@ -106,8 +106,7 @@ sub generate-exports(Any:U $root) is export {
     Map.new:
         '&single-config-run' => -> :$file, :$code {
             $*CONFIG-OBJECT.single-run:
-                    |(:$file with $file),
-                    |(:$code with $code),
+                    |($code with $code),
         },
         '&config-run'        => ->
             IO()     :$file! where { .e || fail "File $_ does not exist" },
