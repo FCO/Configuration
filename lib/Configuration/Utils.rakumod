@@ -55,6 +55,7 @@ sub generate-builder-class(Configuration::Node:U $node) is cached is export {
 sub get-nodes(Configuration::Node $root) is export is cached {
     multi take-nodes(Configuration::Node $_) {
         .take;
+        return Empty unless .HOW.^can: "attributes";
         for .^attributes {
             .type.&take-nodes
         }
@@ -62,6 +63,7 @@ sub get-nodes(Configuration::Node $root) is export is cached {
     multi take-nodes(@val) { take-nodes @val.of }
     multi take-nodes(%val) { take-nodes %val.of }
     multi take-nodes($_) {
+        return Empty unless .HOW.^can: "attributes";
         for .^attributes {
             .type.&take-nodes
         }
@@ -70,6 +72,6 @@ sub get-nodes(Configuration::Node $root) is export is cached {
     CATCH { default { note $_ } }
     gather { take-nodes $root }
         .grep({ .^name && $_ ~~ Configuration::Node })
-        .map({ .^name => generate-builder-class $_ })
+        .duckmap({ .^name => generate-builder-class $_ })
         .cache
 }
