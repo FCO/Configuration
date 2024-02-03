@@ -284,10 +284,21 @@ An example with Cro could look like this:
 =begin code :lang<raku>
 use v6.d;
 use Configuration;
+use Cro::HTTP::Server;
 
+my $old;
 class ServerConfig does Configuration::Node {
     has Str $.host = 'localhost';
     has Int $.port = 80;
+    has     $.server is rw;
+
+    method create-server($application) {
+        $!server = Cro::HTTP::Server.new: :host($.host), :port($.port), :$application;
+        $!server.start;
+        say "server started on { $!host }:{ $!port }";
+        .stop with $old;
+        $old = $!server;
+    }
 }
 
 sub EXPORT {
@@ -300,6 +311,8 @@ And the code could look something like this:
 =begin code :lang<raku>
 use Cro::HTTP::Router;
 use Cro::HTTP::Server;
+
+use lib "./examples/cro";
 use ServerConfig;
 
 my $application = route {
@@ -308,19 +321,13 @@ my $application = route {
     }
 }
 
-my Cro::Service $server;
 react {
-    whenever config-run :file<examples/cro.rakuconfig>, :watch -> $config {
-        my $old = $server;
-        $server = Cro::HTTP::Server.new:
-                  :host($config.host), :port($config.port), :$application;
-        $server.start;
-        say "server started on { $config.host }:{ $config.port }";
-        .stop with $old;
-    }
-    whenever signal(SIGINT) {
-        $server.stop;
-        exit;
+    whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
+        $config.create-server: $application;
+        whenever signal(SIGINT) {
+            $config.server.stop;
+            done;
+        }
     }
 }
 =end code
