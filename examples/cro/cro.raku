@@ -10,18 +10,12 @@ my $application = route {
     }
 }
 
-my Cro::Service $server;
 react {
     whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
-        my $old = $server;
-        $server = Cro::HTTP::Server.new:
-                  :host($config.host), :port($config.port), :$application;
-        $server.start;
-        say "server started on { $config.host }:{ $config.port }";
-        .stop with $old;
-    }
-    whenever signal(SIGINT) {
-        $server.stop;
-        exit;
+        $config.create-server: $application;
+        whenever signal(SIGINT) {
+            $config.server.stop;
+            done;
+        }
     }
 }
