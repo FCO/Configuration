@@ -14,10 +14,17 @@ sub choose-pars(&block, :$parent, :$root) is export {
 sub generate-builder-class(Configuration::Node:U $node) is cached is export {
     my $builder = Metamodel::ClassHOW.new_type: :name($node.^name ~ "Builder");
     $builder.^add_parent: $node;
-    $builder.^add_method: "gist", my method () {
+    $builder.^add_method: "raku", my method {
+      self.gist
+    };
+    $builder.^add_method: "gist", my method {
+      do with self {
         join ",\n", do for self.^methods -> &meth {
             "{ &meth.name } => ???"
         }
+      } else {
+        "({ self.^name }})"
+      }
     };
     for $node.^attributes.grep(*.has_accessor) -> Attribute $attr (::T :$type, |) {
         my $name = $attr.name.substr: 2;
@@ -25,14 +32,20 @@ sub generate-builder-class(Configuration::Node:U $node) is cached is export {
             $builder.^add_method: $name, method () is rw {
                 Proxy.new:
                         FETCH => -> $self {
-                            %*DATA{$name}:exists
+                            %*DATA{$name} := %*DATA{$name}:exists
                                     ?? %*DATA{$name}
-                                    !! $attr.build // $attr.type
+                                    !! $attr.build
+                                      // $attr.type ~~ Positional
+                                        ?? []
+                                        !! $attr.type ~~ Associative
+                                          ?? %()
+                                          !! $attr.type
                         },
-                        STORE => -> $self, T \value {
-                            X::TypeCheck::Assignment.new(got => value, expected => $attr.type).throw unless value ~~ $attr
-                            .type;
-                            %*DATA{$name} = value
+                        STORE => -> $self, $value {
+                            if $attr.type !~~ (Positional|Associative) && $value !~~ $attr.type {
+                                X::TypeCheck::Assignment.new(got => $value, expected => $attr.type).throw;
+                            }
+                            %*DATA{$name} := $value<>
                         }
             }
         } else {

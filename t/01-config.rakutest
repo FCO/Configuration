@@ -1,0 +1,71 @@
+use Test;
+use Configuration;
+
+class Conf1 does Configuration::Node {
+  has     $.any;
+  has Int $.int;
+  has     @.array;
+  has     %.hash;
+
+  method join { join " - ", $!any, $!int, @!array.raku, %!hash.raku }
+  method gist { self.raku }
+}
+
+my %exports := generate-exports Conf1;
+
+is %exports<&config>.({
+  .any = 42
+}).raku, Conf1.new(:42any).raku, "Passing Int to any";
+
+is %exports<&config>.({
+  .any = "bla"
+}).raku, Conf1.new(:any<bla>).raku, "Passing Str to any";
+
+is %exports<&config>.({
+  .any = * + 1
+}).any.(1), 2, "Passing WhateverCode to any";
+
+is %exports<&config>.({
+  .int = 42
+}).raku, Conf1.new(:42int).raku, "Passing 42 to int";
+
+{
+  my $error = False;
+  my $*ERR = class :: {
+    method print($msg) {
+      ok $msg.starts-with("Error on configuration file"), "Right error message";
+      $error = True;
+    }
+  }.new;
+  is %exports<&config>.({
+    .int = "bla"
+  }), Nil, "Passing wrong type";
+  ok $error, "Called 'note'"
+};
+
+is %exports<&config>.({
+  .array = 42
+}).raku, Conf1.new(:array[42,]).raku, "Passing 42 to array";
+
+is %exports<&config>.({
+  .array.push: 13
+}).raku, Conf1.new(:array[13,]).raku, "Push 13 on array";
+
+is %exports<&config>.({
+  .array = 3.14, 13, 42
+}).raku, Conf1.new(:array[3.14, 13, 42]).raku, "Passing 3.14, 13, 42 to array";
+
+is %exports<&config>.({
+  .hash = answer => 42
+}).raku, Conf1.new(:hash{answer => 42,}).raku, "Passing answer => 42 to hash";
+
+# is %exports<&config>.({
+#   .hash.push: luck => 13
+# }).raku, Conf1.new(:hash{luck => 13,}).raku, "Push luck => 13 on hash";
+
+is %exports<&config>.({
+  .hash = pi => 3.14, luck => 13, answer => 42
+}).raku, Conf1.new(:hash{ pi => 3.14, luck => 13, answer => 42 }).raku, "Passing pi => 3.14, luck => 13, answer => 42 to hash";
+
+
+done-testing
