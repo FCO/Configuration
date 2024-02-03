@@ -7,6 +7,12 @@ class Conf1 does Configuration::Node {
   has     @.array;
   has     %.hash;
 
+  method set(:$any, :$int, :$array, :$hash) {
+    $.any   = $_ with $any;
+    $.int   = $_ with $int;
+    $.array = $_ with $array;
+    $.hash  = $_ with $hash;
+  }
   method join { join " - ", $!any, $!int, @!array.raku, %!hash.raku }
   method gist { self.raku }
 }
@@ -59,13 +65,24 @@ is %exports<&config>.({
   .hash = answer => 42
 }).raku, Conf1.new(:hash{answer => 42,}).raku, "Passing answer => 42 to hash";
 
-# is %exports<&config>.({
-#   .hash.push: luck => 13
-# }).raku, Conf1.new(:hash{luck => 13,}).raku, "Push luck => 13 on hash";
+is %exports<&config>.({
+  .hash<luck> = 13
+}).raku, Conf1.new(:hash{luck => 13,}).raku, "Push luck => 13 on hash";
 
 is %exports<&config>.({
   .hash = pi => 3.14, luck => 13, answer => 42
 }).raku, Conf1.new(:hash{ pi => 3.14, luck => 13, answer => 42 }).raku, "Passing pi => 3.14, luck => 13, answer => 42 to hash";
 
+is %exports<&config>.({
+  .set: :any<set>
+}).raku, Conf1.new(:any<set>).raku, "using method";
+
+is %exports<&config>.({
+  .set: :any<set>, :1int
+}).raku, Conf1.new(:any<set>, :1int).raku, "using method";
+
+# is %exports<&config>.({
+#   .set: :any<set>, :1int, :array[1,2,3]
+# }).raku, Conf1.new(:any<set>, :1int).raku, "using method";
 
 done-testing
