@@ -1,11 +1,12 @@
 Very early stage of development!
 
-# Example
-
+Example
+=======
 
 For defining what classes to use as configuration, you can do something like:
 
-## Configuration definition (Test1Config.pm)
+Configuration definition (Test1Config.pm)
+-----------------------------------------
 
 ```raku
 use v6.d;
@@ -24,7 +25,8 @@ sub EXPORT {
 
 Then, for using that to write a configuration, it's just question of:
 
-## Configuration (`my-conf.rakuconfig`)
+Configuration (`my-conf.rakuconfig`)
+------------------------------------
 
 ```raku
 use Test1Config;
@@ -35,11 +37,10 @@ config {
 }
 ```
 
-It uses the `config` function exported by the module created before
-that waits for a block that will expect a builder for the configured
-class as the first parameter.
+It uses the `config` function exported by the module created before that waits for a block that will expect a builder for the configured class as the first parameter.
 
-## Program using the configuration:
+Program using the configuration:
+--------------------------------
 
 ```raku
 use Test1Config;
@@ -47,12 +48,9 @@ use Test1Config;
 say await config-run :file<examples/test1.rakuconfig>
 ```
 
-On your software you will use the same module where you defined the
-configuration, and use it's exported functions to the the populated
-configuration class object.
+On your software you will use the same module where you defined the configuration, and use it's exported functions to the the populated configuration class object.
 
 This, with that configuration, will print:
-
 
 ```raku
 Test1Config.new(a => 1, b => 2, c => 42)
@@ -68,8 +66,7 @@ react whenever config-run :file<./my-conf.rakuconfig>, :signal(SIGUSR1) {
 }
 ```
 
-The whenever will be called every time the configuration change and SIGUSR1 is sent to the process.
-It also can watch the configuration file:
+The whenever will be called every time the configuration change and SIGUSR1 is sent to the process. It also can watch the configuration file:
 
 ```raku
 use Test1Config;
@@ -79,8 +76,7 @@ react whenever config-run :file<./my-conf.rakuconfig>, :watch {
 }
 ```
 
-And it will reload whenever the file changes.
-The `whenever`, with the current configuration, will receive this object:
+And it will reload whenever the file changes. The `whenever`, with the current configuration, will receive this object:
 
 ```raku
 Test1Config.new(a => 1, b => 2, c => 42)
@@ -107,7 +103,6 @@ class RootConfig does Configuration::Node {
 sub EXPORT {
     generate-exports RootConfig
 }
-
 ```
 
 Your `whenever` will receive an object like this:
@@ -136,7 +131,8 @@ Test1Config.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost",
 
 An example with Cro could look like this:
 
-## Config Declaration (ServerConfig.rakumod):
+Config Declaration (ServerConfig.rakumod):
+------------------------------------------
 
 ```raku
 use v6.d;
@@ -181,5 +177,4 @@ react {
     }
 }
 ```
-
 
