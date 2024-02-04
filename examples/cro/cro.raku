@@ -14,7 +14,7 @@ react {
     whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
         $config.create-server: $application;
         whenever signal(SIGINT) {
-            $config.server.stop;
+            $config.stop-server;
             done;
         }
     }

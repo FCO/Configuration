@@ -293,11 +293,15 @@ class ServerConfig does Configuration::Node {
     has     $.server is rw;
 
     method create-server($application) {
-        $!server = Cro::HTTP::Server.new: :host($.host), :port($.port), :$application;
+        $!server = Cro::HTTP::Server.new: :$.host, :$.port, :$application;
         $!server.start;
         say "server started on { $!host }:{ $!port }";
         .stop with $old;
         $old = $!server;
+    }
+
+    method stop-server {
+        $!server.stop
     }
 }
 
@@ -325,7 +329,7 @@ react {
     whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
         $config.create-server: $application;
         whenever signal(SIGINT) {
-            $config.server.stop;
+            $config.stop-server;
             done;
         }
     }
