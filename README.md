@@ -5,7 +5,7 @@ Example
 
 For defining what classes to use as configuration, you can do something like:
 
-Configuration definition (Test1Config.pm)
+Configuration definition (Test1Config.rakumod)
 -----------------------------------------
 
 ```raku
