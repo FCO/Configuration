@@ -148,7 +148,7 @@ Very early stage of development!
 
 For defining what classes to use as configuration, you can do something like:
 
-=head2 Configuration definition (Test1Config.pm)
+=head2 Configuration definition (Test1Config.rakumod)
 
 =begin code :lang<raku>
 use v6.d;
