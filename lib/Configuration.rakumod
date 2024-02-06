@@ -166,6 +166,9 @@ multi EXPORT {
 
 =begin pod
 
+[![Build Status](https://github.com/FCO/Configuration/workflows/test/badge.svg)](https://github.com/FCO/Configuration/actions)
+[![SparrowCI](https://ci.sparrowhub.io/project/gh-FCO-Configuration/badge)](https://ci.sparrowhub.io)
+
 Very early stage of development!
 
 =head1 Example
