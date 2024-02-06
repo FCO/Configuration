@@ -1,142 +1,163 @@
-unit class Configuration;
-use Configuration::Utils;
-use Configuration::Node;
+class Configuration {
+  use Configuration::Utils;
+  use Configuration::Node;
 
-has IO()   $.file;
-has        $.watch;
-has Signal $.signal;
-has Any:U  $.root   is required;
-has Any    $.current;
-has Supply $.supply;
+  has IO()   $.file = self.default-file;
+  has        $.watch;
+  has Signal $.signal;
+  has Any:U  $.root   is required;
+  has Any    $.current;
+  has Supply $.supply;
 
-submethod TWEAK(|) {
-    $!watch = $!file if $!file && $!watch ~~ Bool && $!watch;
+  submethod TWEAK(|) {
+      $!watch = $!file if $!file && $!watch ~~ Bool && $!watch;
+  }
+
+  method default-file {
+      for [
+        $*PROGRAM-NAME,
+        "{ %*ENV<HOME> }/{ $*PROGRAM-NAME.IO.basename }",
+        "/etc/{ $*PROGRAM-NAME.IO.basename }",
+      ].map: *.IO.extension("rakuconfig") -> IO() $_ {
+        .return if :f
+      }
+      die "Not found any of these files: "
+  }
+
+  method supply-list {
+      |(
+          ( .watch     with $!watch  ),
+          ( signal($_) with $!signal ),
+      )
+  }
+
+  role Generator[::T $builder] {
+      method gen($root) {
+          # return sub config(&block:(T)) {
+          return sub config(&block) { # Should it be typed?
+              CATCH {
+                  default {
+                      note "Error on configuration file: $_";
+                  }
+              }
+              my %*DATA;
+              my %*ROOT := %*DATA;
+              block $builder, |choose-pars(&block, :root(%*DATA));
+              $root.new(|%*DATA.Map);
+          }
+      }
+  }
+
+  method generate-config {
+      my $builder = generate-builder-class $!root;
+      Generator[$builder].gen($!root)
+  }
+
+  method conf-from-file is hidden-from-backtrace {
+      CATCH {
+          default {
+              warn "Error loading file $!file: $_"
+          }
+      }
+      EVALFILE $!file
+  }
+
+  method conf-from-string($str) is hidden-from-backtrace {
+      CATCH {
+          default {
+              warn "Error loading configuration: $_"
+          }
+      }
+      use MONKEY-SEE-NO-EVAL;
+      EVAL $str;
+  }
+
+  multi method single-run(Str $code) is hidden-from-backtrace {
+      self.conf-from-string($code)
+  }
+
+  multi method single-run is hidden-from-backtrace {
+      self.conf-from-file;
+  }
+
+  multi method run is hidden-from-backtrace {
+      $!supply = Supply.merge(Supply.from-list([True]), |self.supply-list)
+        .map({try self.single-run})
+        .grep(*.defined)
+        .squish
+        .do: { $!current = $_ }
+  }
+
+  proto single-config-run(Any:U, |) is export is hidden-from-backtrace {*}
+
+  multi single-config-run(Any:U $root, IO() :$file! where *.f) is hidden-from-backtrace {
+      ::?CLASS.new(:$root, :$file).single-run
+  }
+
+  multi single-config-run(Any:U $root, Str :$code!) is hidden-from-backtrace {
+      ::?CLASS.new(:$root).single-run(:$code)
+  }
+
+  multi config-run(Any:U $root, |c) is export is hidden-from-backtrace {
+      ::?CLASS.new(:$root, |c).run
+  }
+
+  sub generate-config(Any:U $root) is export {
+      ::?CLASS.new(:$root).generate-config
+  }
+
+  multi get-supply($obj) {$obj.supply}
+  multi get-supply($obj, &selector) {
+      $obj.supply.map(&selector).squish
+  }
+
+  method generate-exports(Any:U $root) {
+      PROCESS::<$CONFIG-OBJECT> //= ::?CLASS.new(:$root);
+
+      Map.new:
+          '&single-config-run' => -> :$file, :$code {
+              $*CONFIG-OBJECT.single-run:
+                      |($code with $code),
+          },
+          '&config-run'        => ->
+              IO()     :$file where { :e || fail "File $_ does not exist" },
+                       :$watch is copy,
+              Signal() :$signal
+          {
+              $watch = $watch
+                  ?? $file
+                  !! Nil
+                  if $watch ~~ Bool;
+
+              $*CONFIG-OBJECT .= clone(
+                  |(file   => $_ with $file),
+                  |(watch  => $_ with $watch),
+                  |(signal => $_ with $signal),
+              );
+              $*CONFIG-OBJECT.run
+          },
+          '&config-supply'     => -> &selector? { $*CONFIG-OBJECT.&get-supply: |($_ with &selector) },
+          '&get-config'        => { $*CONFIG-OBJECT.current },
+          '&config'            => $*CONFIG-OBJECT.generate-config,
+          'ConfigClass'        => generate-builder-class($root),
+          |get-nodes($root),
+      ;
+  }
 }
 
-method supply-list {
-    |(
-        ( .watch     with $!watch  ),
-        ( signal($_) with $!signal ),
-    )
+sub generate-exports($root) is export {
+  Configuration.generate-exports: $root
 }
 
-role Generator[::T $builder] {
-    method gen($root) {
-        # return sub config(&block:(T)) {
-        return sub config(&block) { # Should it be typed?
-            CATCH {
-                default {
-                    note "Error on configuration file: $_";
-                }
-            }
-            my %*DATA;
-            my %*ROOT := %*DATA;
-            block $builder, |choose-pars(&block, :root(%*DATA));
-            $root.new(|%*DATA.Map);
-        }
+sub EXPORT($node?) {
+    sub export {
+        generate-exports $node
     }
-}
-
-method generate-config {
-    my $builder = generate-builder-class $!root;
-    Generator[$builder].gen($!root)
-}
-
-method conf-from-file is hidden-from-backtrace {
-    CATCH {
-        default {
-            warn "Error loading file $!file: $_"
-        }
-    }
-    EVALFILE $!file
-}
-
-method conf-from-string($str) is hidden-from-backtrace {
-    CATCH {
-        default {
-            warn "Error loading configuration: $_"
-        }
-    }
-    use MONKEY-SEE-NO-EVAL;
-    EVAL $str;
-}
-
-multi method single-run(Str $code) is hidden-from-backtrace {
-    self.conf-from-string($code)
-}
-
-multi method single-run is hidden-from-backtrace {
-    self.conf-from-file;
-}
-
-multi method run is hidden-from-backtrace {
-    $!supply = Supply.merge(Supply.from-list([True]), |self.supply-list)
-      .map({try self.single-run})
-      .grep(*.defined)
-      .squish
-      .do: { $!current = $_ }
-}
-
-proto single-config-run(Any:U, |) is export is hidden-from-backtrace {*}
-
-multi single-config-run(Any:U $root, IO() :$file! where *.f) is hidden-from-backtrace {
-    ::?CLASS.new(:$root, :$file).single-run
-}
-
-multi single-config-run(Any:U $root, Str :$code!) is hidden-from-backtrace {
-    ::?CLASS.new(:$root).single-run(:$code)
-}
-
-multi config-run(Any:U $root, |c) is export is hidden-from-backtrace {
-    ::?CLASS.new(:$root, |c).run
-}
-
-sub generate-config(Any:U $root) is export {
-    ::?CLASS.new(:$root).generate-config
-}
-
-multi get-supply($obj) {$obj.supply}
-multi get-supply($obj, &selector) {
-    $obj.supply.map(&selector).squish
-}
-
-sub generate-exports(Any:U $root) is export {
-    PROCESS::<$CONFIG-OBJECT> //= ::?CLASS.new(:$root);
 
     Map.new:
-        '&single-config-run' => -> :$file, :$code {
-            $*CONFIG-OBJECT.single-run:
-                    |($code with $code),
-        },
-        '&config-run'        => ->
-            IO()     :$file! where { .e || fail "File $_ does not exist" },
-                     :$watch is copy,
-            Signal() :$signal
-        {
-            $watch = $watch
-                ?? $file
-                !! Nil
-                if $watch ~~ Bool;
-
-            $*CONFIG-OBJECT .= clone(
-                |(file   => $_ with $file),
-                |(watch  => $_ with $watch),
-                |(signal => $_ with $signal),
-            );
-            $*CONFIG-OBJECT.run
-        },
-        '&config-supply'     => -> &selector? { $*CONFIG-OBJECT.&get-supply: |($_ with &selector) },
-        '&get-config'        => { $*CONFIG-OBJECT.current },
-        '&config'            => $*CONFIG-OBJECT.generate-config,
-        'ConfigClass'        => generate-builder-class($root),
-        |get-nodes($root),
-    ;
-}
-
-sub EXPORT {
-    Map.new:
-        "Configuration"       => Configuration,
+        "Configuration" => Configuration,
         "Configuration::Node" => Configuration::Node,
+        |("&EXPORT" => &export with $node),
 }
 
 =begin pod
@@ -152,7 +173,7 @@ For defining what classes to use as configuration, you can do something like:
 
 =begin code :lang<raku>
 use v6.d;
-use Configuration;
+use Configuration::Node;
 
 class RootConfig does Configuration::Node {
     has Int      $.a;
@@ -160,14 +181,15 @@ class RootConfig does Configuration::Node {
     has Int      $.c      = $!b * 3;
 }
 
-sub EXPORT {
-    generate-exports RootConfig
-}
+use Configuration RootConfig
 =end code
 
 Then, for using that to write a configuration, it's just question of:
 
 =head2 Configuration (`my-conf.rakuconfig`)
+
+(by default, it searches for configuration on the same dir as the executable
+(with the same name adding '.rakuconfig'), on the home directory and on /etc)
 
 =begin code :lang<raku>
 use Test1Config;
@@ -232,7 +254,7 @@ Test1Config.new(a => 1, b => 2, c => 42)
 If your config declaration changed to something like this:
 
 =begin code :lang<raku>
-use Configuration;
+use Configuration::Node;
 
 class DBConfig does Configuration::Node {
     has Str $.host = 'localhost';
@@ -247,9 +269,7 @@ class RootConfig does Configuration::Node {
     has DBConfig $.db .= new;
 }
 
-sub EXPORT {
-    generate-exports RootConfig
-}
+use Configuration RootConfig
 
 =end code
 
@@ -283,7 +303,7 @@ An example with Cro could look like this:
 
 =begin code :lang<raku>
 use v6.d;
-use Configuration;
+use Configuration::Node;
 use Cro::HTTP::Server;
 
 my $old;
@@ -305,9 +325,7 @@ class ServerConfig does Configuration::Node {
     }
 }
 
-sub EXPORT {
-    generate-exports ServerConfig;
-}
+use Configuration ServerConfig;
 =end code
 
 And the code could look something like this:

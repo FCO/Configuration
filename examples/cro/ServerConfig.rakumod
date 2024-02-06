@@ -1,6 +1,6 @@
 use v6.d;
-use Configuration;
 use Cro::HTTP::Server;
+use Configuration::Node;
 
 my $old;
 class ServerConfig does Configuration::Node {
@@ -20,7 +20,4 @@ class ServerConfig does Configuration::Node {
         $!server.stop
     }
 }
-
-sub EXPORT {
-    generate-exports ServerConfig;
-}
+use Configuration ServerConfig;

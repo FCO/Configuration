@@ -1,0 +1,18 @@
+# Test1Config exports many thing, one of them
+# is the `config` sub. COMMA is not recognizing
+# any of its exports (not even the config sub).
+# That might be a bug on COMMA.
+use Test2Config;
+
+# You don't need to type it, but that's try
+# to make COMMAIDE autocomplete fields
+config -> RootConfig $_ {
+    .a = 1;
+    .c = 42;
+    # You don't need to type it, but that's try
+    # to make COMMAIDE autocomplete fields
+    .db: -> DBConfig $_ {
+        .dbname = "my-database";
+    }
+    .answer = 123;
+}

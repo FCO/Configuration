@@ -6,11 +6,11 @@ Example
 For defining what classes to use as configuration, you can do something like:
 
 Configuration definition (Test1Config.rakumod)
------------------------------------------
+----------------------------------------------
 
 ```raku
 use v6.d;
-use Configuration;
+use Configuration::Node;
 
 class RootConfig does Configuration::Node {
     has Int      $.a;
@@ -18,15 +18,15 @@ class RootConfig does Configuration::Node {
     has Int      $.c      = $!b * 3;
 }
 
-sub EXPORT {
-    generate-exports RootConfig
-}
+use Configuration RootConfig
 ```
 
 Then, for using that to write a configuration, it's just question of:
 
 Configuration (`my-conf.rakuconfig`)
 ------------------------------------
+
+(by default, it searches for configuration on the same dir as the executable (with the same name adding '.rakuconfig'), on the home directory and on /etc)
 
 ```raku
 use Test1Config;
@@ -85,7 +85,7 @@ Test1Config.new(a => 1, b => 2, c => 42)
 If your config declaration changed to something like this:
 
 ```raku
-use Configuration;
+use Configuration::Node;
 
 class DBConfig does Configuration::Node {
     has Str $.host = 'localhost';
@@ -100,9 +100,7 @@ class RootConfig does Configuration::Node {
     has DBConfig $.db .= new;
 }
 
-sub EXPORT {
-    generate-exports RootConfig
-}
+use Configuration RootConfig
 ```
 
 Your `whenever` will receive an object like this:
@@ -136,7 +134,7 @@ Config Declaration (ServerConfig.rakumod):
 
 ```raku
 use v6.d;
-use Configuration;
+use Configuration::Node;
 use Cro::HTTP::Server;
 
 my $old;
@@ -158,9 +156,7 @@ class ServerConfig does Configuration::Node {
     }
 }
 
-sub EXPORT {
-    generate-exports ServerConfig;
-}
+use Configuration ServerConfig;
 ```
 
 And the code could look something like this:

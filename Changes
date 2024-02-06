@@ -1,6 +1,8 @@
 Revision history for Configuration
 
 {{$NEXT}}
+    - Accept lizmat's sugestion to EXPORT
+    - Add default places to search for config file
 
 0.0.2  2024-02-03T17:54:23Z
     - A few more tests
