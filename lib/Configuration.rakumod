@@ -149,15 +149,19 @@ sub generate-exports($root) is export {
   Configuration.generate-exports: $root
 }
 
-sub EXPORT($node?) {
-    sub export {
-        generate-exports $node
-    }
-
+multi EXPORT($node) {
     Map.new:
         "Configuration" => Configuration,
         "Configuration::Node" => Configuration::Node,
-        |("&EXPORT" => &export with $node),
+        "&EXPORT" => sub export {
+            generate-exports $node
+        }
+}
+
+multi EXPORT {
+    Map.new:
+        "Configuration" => Configuration,
+        "Configuration::Node" => Configuration::Node,
 }
 
 =begin pod
