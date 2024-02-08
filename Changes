@@ -1,6 +1,8 @@
 Revision history for Configuration
 
 {{$NEXT}}
+
+0.0.5  2024-02-08T03:02:37Z
     - Fix export of Builder classes
 
 0.0.4  2024-02-06T23:28:11Z
