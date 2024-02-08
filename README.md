@@ -121,7 +121,11 @@ When the file path for a configuration is not explicitly specified, the Configur
 
 The module follows a hierarchical approach to search for configuration files in the following order:
 
-  * - The same directory as the executable, appending `.rakuconfig` to the executable name. - The user's home directory. - The `/etc` directory, typically used for system-wide configuration files.
+  * The same directory as the executable, appending `.rakuconfig` to the executable name.
+
+  * The user's home directory.
+
+  * The `/etc` directory, typically used for system-wide configuration files.
 
 Example: Implicit Configuration File Usage
 ------------------------------------------
