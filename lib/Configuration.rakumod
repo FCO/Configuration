@@ -187,6 +187,7 @@ This documentation covers the following aspects of the Configuration module:
 =item Defining configuration schemas
 =item Writing configuration files
 =item Utilizing configurations in Raku programs
+=item Understanding Configuration Builders
 =item Dynamically reloading configurations
 =item Handling default configuration file paths
 =item Monitoring specific configuration value changes with config-supply
@@ -201,27 +202,6 @@ To define your application's configuration structure, create a Raku class that d
 
 =begin code :lang<raku>
 use v6.d;
-use Configuration::Node;
-
-class RootConfig does Configuration::Node {
-    has Int $.a;
-    has Int $.b = $!a * 2;
-    has Int $.c = $!b * 3;
-}
-
-use Configuration RootConfig;
-=end code
-
-The Configuration module simplifies this process by automatically applying the `Configuration::Node` role to your root configuration class if it isn't already specified, ensuring consistent behavior and feature availability across all configuration classes.
-
-=head2 Automatic Configuration::Node Role Application
-
-When you define a configuration class and use it with `use Configuration`, the module checks if your class does the `Configuration::Node` role. If the class does not explicitly use `Configuration::Node`, the module will automatically add it. This feature ensures that all necessary functionalities for configuration management are available, even if the developer forgets to specify the role.
-
-=head2 Example: Defining a Configuration Class Without Explicitly Using Configuration::Node
-
-=begin code :lang<raku>
-use v6.d;
 
 class RootConfig {
     has Int $.a;
@@ -231,10 +211,6 @@ class RootConfig {
 
 use Configuration RootConfig;
 =end code
-
-In this example, even though `RootConfig` does not explicitly `do` the `Configuration::Node` role, the Configuration module automatically applies it. This ensures that `RootConfig` has all the capabilities needed to work seamlessly with the Configuration module, such as automatic attribute initialization, type checking, and more.
-
-This automatic role application feature is designed to reduce boilerplate code and make the module more user-friendly, allowing developers to focus on defining their configuration's structure and logic without worrying about the underlying role mechanics.
 
 =head1 WRITING CONFIGURATION FILES
 
@@ -262,6 +238,45 @@ use Test1Config;
 
 say await config-run :file<examples/test1.rakuconfig>;
 =end code
+
+=head1 UNDERSTANDING CONFIGURATION BUILDERS
+
+When utilizing the C<config> function to define or modify configurations, it's crucial to understand that the object you interact with is not directly the configuration object itself. Instead, this object is a specialized builder object, designed to accumulate configuration data before creating the final configuration object.
+
+=head2 The Role of Configuration Builders
+
+For each configuration class you define, the Configuration module automatically generates a corresponding builder class. This builder class is named by appending the word "Builder" to the name of your configuration class. The primary purpose of the builder is to provide a flexible and error-resistant way to gather configuration data.
+
+=head2 Accumulating Configuration Data
+
+The builder class contains read-write (rw) methods corresponding to each attribute defined in your configuration class. These methods are used to set or modify the values of the configuration attributes in a staged manner. By calling these methods, you accumulate the data needed to instantiate the actual configuration object.
+
+Here's how the process works:
+
+1. B<Initialization>: When you call the C<config> function, the Configuration module instantiates the corresponding builder object based on your configuration class.
+2. B<Data Accumulation>: As you use the builder's methods to set configuration values, the builder accumulates this data internally. Each method call adjusts the pending configuration state represented by the builder.
+3. B<Configuration Instantiation>: Once all necessary configuration data is set, the builder uses this accumulated data to create an instance of your configuration class, effectively materializing the final configuration object.
+
+=head2 Example: Using a Configuration Builder
+
+Consider you have a configuration class named C<AppConfig>. The corresponding builder class would be C<AppConfigBuilder>.
+
+=begin code :lang<raku>
+class AppConfig {
+    has Str $.api_key;
+    has Int $.timeout;
+}
+
+# Using the builder to set configuration
+config {
+    .api_key('your_api_key_here');
+    .timeout(300);
+}
+=end code
+
+In this example, `.api_key` and `.timeout` are methods of the `AppConfigBuilder` object provided to the block by the `config` function. These methods set the values that will be used to instantiate `AppConfig` with the provided values.
+
+This builder pattern allows for a clear separation between the definition of configuration data and its usage, enabling more complex configurations to be defined in an intuitive and error-resistant manner.
 
 =head1 DYNAMIC CONFIGURATION RELOADING
 

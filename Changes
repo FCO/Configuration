@@ -1,6 +1,7 @@
 Revision history for Configuration
 
 {{$NEXT}}
+    - Changing docs
 
 0.0.8  2024-02-08T19:48:45Z
     - Auto add Configuration::Node
