@@ -11,6 +11,10 @@ class Configuration {
 
   submethod TWEAK(|) {
       $!watch = $!file if $!file && $!watch ~~ Bool && $!watch;
+      unless $!root ~~ Configuration::Node {
+          $!root.^add_role: Configuration::Node;
+          $!root.^compose
+      }
   }
 
   method default-file {
@@ -207,6 +211,30 @@ class RootConfig does Configuration::Node {
 
 use Configuration RootConfig;
 =end code
+
+The Configuration module simplifies this process by automatically applying the `Configuration::Node` role to your root configuration class if it isn't already specified, ensuring consistent behavior and feature availability across all configuration classes.
+
+=head2 Automatic Configuration::Node Role Application
+
+When you define a configuration class and use it with `use Configuration`, the module checks if your class does the `Configuration::Node` role. If the class does not explicitly use `Configuration::Node`, the module will automatically add it. This feature ensures that all necessary functionalities for configuration management are available, even if the developer forgets to specify the role.
+
+=head2 Example: Defining a Configuration Class Without Explicitly Using Configuration::Node
+
+=begin code :lang<raku>
+use v6.d;
+
+class RootConfig {
+    has Int $.a;
+    has Int $.b = $!a * 2;
+    has Int $.c = $!b * 3;
+}
+
+use Configuration RootConfig;
+=end code
+
+In this example, even though `RootConfig` does not explicitly `do` the `Configuration::Node` role, the Configuration module automatically applies it. This ensures that `RootConfig` has all the capabilities needed to work seamlessly with the Configuration module, such as automatic attribute initialization, type checking, and more.
+
+This automatic role application feature is designed to reduce boilerplate code and make the module more user-friendly, allowing developers to focus on defining their configuration's structure and logic without worrying about the underlying role mechanics.
 
 =head1 WRITING CONFIGURATION FILES
 

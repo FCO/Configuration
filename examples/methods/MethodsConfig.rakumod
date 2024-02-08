@@ -1,7 +1,6 @@
 use v6.d;
-use Configuration::Node;
 
-class RootConfig does Configuration::Node {
+class RootConfig {
     has @.rules;
     method add-rule(Str $rule) {
         @.rules.append: $rule

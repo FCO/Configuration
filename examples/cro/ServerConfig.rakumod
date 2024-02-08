@@ -1,9 +1,8 @@
 use v6.d;
 use Cro::HTTP::Server;
-use Configuration::Node;
 
 my $old;
-class ServerConfig does Configuration::Node {
+class ServerConfig {
     has Str $.host = 'localhost';
     has Int $.port = 80;
     has     $.server is rw;
