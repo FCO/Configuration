@@ -1,34 +1,68 @@
+TITLE
+=====
+
+Configuration Module Documentation
+
+SUBTITLE
+========
+
+Effortlessly manage configurations in Raku applications
+
+This documentation provides a comprehensive guide on using the Configuration module for Raku. The module is designed to simplify the management of configuration data in Raku applications, making it easier to define, use, and update configurations as needed.
+
 [![Build Status](https://github.com/FCO/Configuration/workflows/test/badge.svg)](https://github.com/FCO/Configuration/actions) [![SparrowCI](https://ci.sparrowhub.io/project/git-FCO-Configuration/badge)](https://ci.sparrowhub.io)
 
-Very early stage of development!
+Note: The module is in the early stages of development.
 
-Example
-=======
+SYNOPSIS
+========
 
-For defining what classes to use as configuration, you can do something like:
+This documentation covers the following aspects of the Configuration module:
 
-Configuration definition (Test1Config.rakumod)
-----------------------------------------------
+  * Defining configuration schemas
+
+  * Writing configuration files
+
+  * Utilizing configurations in Raku programs
+
+  * Dynamically reloading configurations
+
+  * Handling default configuration file paths
+
+  * Monitoring specific configuration value changes with config-supply
+
+  * Retrieving the current configuration with get-config
+
+  * Obtaining configuration without a Supply with single-config-run
+
+CONFIGURATION DEFINITION
+========================
+
+To define your application's configuration structure, create a Raku class that does the `Configuration::Node` role. This class will specify the fields and default values for your configuration.
+
+Example: Defining a Configuration Class
+---------------------------------------
 
 ```raku
 use v6.d;
 use Configuration::Node;
 
 class RootConfig does Configuration::Node {
-    has Int      $.a;
-    has Int      $.b      = $!a * 2;
-    has Int      $.c      = $!b * 3;
+    has Int $.a;
+    has Int $.b = $!a * 2;
+    has Int $.c = $!b * 3;
 }
 
-use Configuration RootConfig
+use Configuration RootConfig;
 ```
 
-Then, for using that to write a configuration, it's just question of:
+WRITING CONFIGURATION FILES
+===========================
 
-Configuration (`my-conf.rakuconfig`)
-------------------------------------
+Configuration files are written in Raku, allowing you to leverage Raku's syntax for setting configuration values.
 
-(by default, it searches for configuration on the same dir as the executable (with the same name adding '.rakuconfig'), on the home directory and on /etc)
+Example: Creating a Configuration File (`my-conf.rakuconfig`)
+-------------------------------------------------------------
 
 ```raku
 use Test1Config;
@@ -39,36 +73,27 @@ config {
 }
 ```
 
-It uses the `config` function exported by the module created before that waits for a block that will expect a builder for the configured class as the first parameter.
+UTILIZING CONFIGURATIONS IN YOUR PROGRAM
+========================================
 
-Program using the configuration:
---------------------------------
+To use the defined configurations in your Raku application, simply use the module where the configuration was defined and call the appropriate functions to access the configuration data.
 
-```raku
-use Test1Config;
-
-say await config-run :file<examples/test1.rakuconfig>
-```
-
-On your software you will use the same module where you defined the configuration, and use it's exported functions to the the populated configuration class object.
-
-This, with that configuration, will print:
-
-```raku
-Test1Config.new(a => 1, b => 2, c => 42)
-```
-
-But you could also make it reload if the file changes:
+Example: Accessing Configuration in a Raku Program
+--------------------------------------------------
 
 ```raku
 use Test1Config;
 
-react whenever config-run :file<./my-conf.rakuconfig>, :signal(SIGUSR1) {
-    say "Configuration changed: { .raku }";
-}
+say await config-run :file<examples/test1.rakuconfig>;
 ```
 
-The whenever will be called every time the configuration change and SIGUSR1 is sent to the process. It also can watch the configuration file:
+DYNAMIC CONFIGURATION RELOADING
+===============================
+
+The Configuration module supports dynamic reloading of configurations, allowing your application to respond to changes in configuration without restarting.
+
+Example: Reloading Configuration on File Change
+-----------------------------------------------
 
 ```raku
 use Test1Config;
@@ -78,112 +103,114 @@ react whenever config-run :file<./my-conf.rakuconfig>, :watch {
 }
 ```
 
-And it will reload whenever the file changes. The `whenever`, with the current configuration, will receive this object:
-
-```raku
-Test1Config.new(a => 1, b => 2, c => 42)
-```
-
-If your config declaration changed to something like this:
-
-```raku
-use Configuration::Node;
-
-class DBConfig does Configuration::Node {
-    has Str $.host = 'localhost';
-    has Int $.port = 5432;
-    has Str $.dbname;
-}
-
-class RootConfig does Configuration::Node {
-    has Int $.a;
-    has Int $.b = $!a * 2;
-    has Int $.c = $!b * 3;
-    has DBConfig $.db .= new;
-}
-
-use Configuration RootConfig
-```
-
-Your `whenever` will receive an object like this:
-
-```raku
-RootConfig.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => Str))
-```
-
-And if you want to change your configuration to populate the DB config, you can do that with something like this:
-
-```raku
-config {
-    .a = 1;
-    .c = 42;
-    .db: {
-        .dbname = "my-database";
-    }
-}
-```
-
-And it will generate the object:
-
-```raku
-Test1Config.new(a => 1, b => 2, c => 42, db => DBConfig.new(host => "localhost", port => 5432, dbname => "my-database"))
-```
-
-An example with Cro could look like this:
-
-Config Declaration (ServerConfig.rakumod):
+Example: Reloading Configuration on Signal
 ------------------------------------------
 
 ```raku
-use v6.d;
-use Configuration::Node;
-use Cro::HTTP::Server;
+use Test1Config;
 
-my $old;
-class ServerConfig does Configuration::Node {
-    has Str $.host = 'localhost';
-    has Int $.port = 80;
-    has     $.server is rw;
-
-    method create-server($application) {
-        $!server = Cro::HTTP::Server.new: :$.host, :$.port, :$application;
-        $!server.start;
-        say "server started on { $!host }:{ $!port }";
-        .stop with $old;
-        $old = $!server;
-    }
-
-    method stop-server {
-        $!server.stop
-    }
+react whenever config-run :file<./my-conf.rakuconfig>, :signal(SIGUSR1) {
+    say "Configuration changed: { .raku }";
 }
-
-use Configuration ServerConfig;
 ```
 
-And the code could look something like this:
+USING DEFAULT CONFIGURATION FILE PATHS
+======================================
+
+When the file path for a configuration is not explicitly specified, the Configuration module intelligently searches for configuration files in default locations. This feature simplifies the configuration management process by automatically detecting and using configuration files based on standardized naming conventions and common directory locations.
+
+The module follows a hierarchical approach to search for configuration files in the following order:
+
+  * - The same directory as the executable, appending `.rakuconfig` to the executable name. - The user's home directory. - The `/etc` directory, typically used for system-wide configuration files.
+
+Example: Implicit Configuration File Usage
+------------------------------------------
 
 ```raku
-use Cro::HTTP::Router;
-use Cro::HTTP::Server;
+use Test1Config;
 
-use lib "./examples/cro";
-use ServerConfig;
+# No file path is specified; the module automatically searches for `app.rakuconfig` in default locations.
+say await config-run;
+```
 
-my $application = route {
-    get -> 'greet', $name {
-        content 'text/plain', "Hello, $name!";
-    }
-}
+MONITORING SPECIFIC CONFIGURATION VALUE CHANGES WITH CONFIG-SUPPLY
+==================================================================
+
+The `config-supply` function in the Configuration module is a standout feature for applications needing to monitor and react to changes in specific configuration values in real-time. This approach is invaluable for creating highly responsive and adaptable applications that depend on dynamic configuration data.
+
+By returning a `Supply` that emits updates whenever the monitored configuration value changes, `config-supply` facilitates a reactive programming model. This enables developers to specify precisely which configuration values to observe and to define actions that should occur in response to changes in these values.
+
+Focused Monitoring with `config-supply`
+---------------------------------------
+
+The purpose of `config-supply` is to offer a targeted and efficient way to watch individual configuration values. This is especially useful in complex applications where certain features or behaviors are controlled by specific configuration settings, and updates to these settings need to be handled promptly.
+
+Example: Reacting to Changes in a Specific Configuration Value
+--------------------------------------------------------------
+
+```raku
+use Test1Config;
+
+# Reacting to changes in the `.a` configuration value
+config-supply(*.a).tap: {
+    say ".a has changed: ", $_
+};
+```
+
+This example highlights the use of `config-supply` to monitor changes to the `.a` configuration value. By tapping into the supply, the application can execute a block of code—in this case, logging the change—whenever `.a` is updated.
+
+Integration with Reactive Programming Patterns
+----------------------------------------------
+
+`config-supply` integrates seamlessly with Raku's reactive programming constructs (`react` and `whenever`), allowing for elegant and powerful event-driven programming based on configuration changes.
+
+Example: Dynamic Behavior Adjustment Based on Configuration Changes
+-------------------------------------------------------------------
+
+```raku
+use Test1Config;
 
 react {
-    whenever config-run :file<examples/cro/cro.rakuconfig>, :watch -> $config {
-        $config.create-server: $application;
-        whenever signal(SIGINT) {
-            $config.stop-server;
-            done;
-        }
+    # Dynamically adjust behavior based on changes to the `.a` value
+    whenever config-supply(*.a) -> $new-value {
+        say ".a has changed to: $new-value";
     }
 }
 ```
+
+RETRIEVING THE CURRENT CONFIGURATION WITH GET-CONFIG
+====================================================
+
+The `get-config` function is a straightforward way to access the current value of your application's configuration. This function returns the current configuration object, allowing for immediate access to its properties without monitoring for changes.
+
+Example: Accessing Current Configuration Values
+-----------------------------------------------
+
+```raku
+use Test1Config;
+
+# Retrieve the current configuration
+my $current-config = get-config();
+
+say "Current configuration: ", $current-config.raku;
+```
+
+OBTAINING CONFIGURATION WITHOUT A SUPPLY WITH SINGLE-CONFIG-RUN
+===============================================================
+
+While `config-run` provides a `Supply` that emits configuration changes over time, `single-config-run` is designed to return the configuration object a single time. This function is useful when you only need to read the configuration once and do not require a reactive setup to monitor for changes.
+
+Example: Using Single-Config-Run to Access Configuration
+--------------------------------------------------------
+
+```raku
+use Test1Config;
+
+# Obtain the configuration a single time
+my $config = single-config-run();
+
+say "Configuration obtained once: ", $config.raku;
+```
+
+By incorporating these functions, developers are equipped with flexible tools for managing configuration according to the needs of their application, whether it's accessing the current configuration state, reacting to changes in real-time, or obtaining the configuration once without further monitoring.
 

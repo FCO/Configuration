@@ -1,6 +1,7 @@
 Revision history for Configuration
 
 {{$NEXT}}
+    - Use AI generated documentation
 
 0.0.5  2024-02-08T03:02:37Z
     - Fix export of Builder classes
