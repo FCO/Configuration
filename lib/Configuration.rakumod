@@ -153,7 +153,7 @@ multi EXPORT($node) {
     Map.new:
         "Configuration" => Configuration,
         "Configuration::Node" => Configuration::Node,
-        "&EXPORT" => sub export {
+        "&EXPORT" => sub {
             generate-exports $node
         }
 }

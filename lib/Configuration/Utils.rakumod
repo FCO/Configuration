@@ -83,8 +83,8 @@ sub get-nodes(Configuration::Node $root) is export is cached {
     }
     multi take-nodes(Mu) {}
     CATCH { default { note $_ } }
-    gather { take-nodes $root }
-        .grep({ .^name && $_ ~~ Configuration::Node })
-        .duckmap({ .^name => generate-builder-class $_ })
+    gather { take-nodes $root }\
+        .grep({ .^name && $_ ~~ Configuration::Node })\
+        .duckmap({ "{ .^name }Builder" => generate-builder-class $_ })\
         .cache
 }
