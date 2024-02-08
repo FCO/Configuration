@@ -269,8 +269,8 @@ class AppConfig {
 
 # Using the builder to set configuration
 config {
-    .api_key('your_api_key_here');
-    .timeout(300);
+    .api_key = 'your_api_key_here';
+    .timeout = 300;
 }
 =end code
 
