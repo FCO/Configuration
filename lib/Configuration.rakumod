@@ -2,12 +2,13 @@ class Configuration {
   use Configuration::Utils;
   use Configuration::Node;
 
-  has IO()   $.file = self.default-file;
-  has        $.watch;
-  has Signal $.signal;
-  has Any:U  $.root   is required;
-  has Any    $.current;
-  has Supply $.supply;
+  has IO()    $.file = self.default-file;
+  has         $.watch;
+  has Signal  $.signal;
+  has         &.block;
+  has Any:U   $.root   is required;
+  has Any     $.current;
+  has Supply  $.supply = Supplier.new.Supply;
 
   submethod TWEAK(|) {
       $!watch = $!file if $!file && $!watch ~~ Bool && $!watch;
@@ -18,6 +19,7 @@ class Configuration {
   }
 
   method default-file {
+      return with &!block;
       for [
         $*PROGRAM-NAME,
         "{ %*ENV<HOME> }/{ $*PROGRAM-NAME.IO.basename }",
@@ -63,7 +65,7 @@ class Configuration {
               die "Error loading file $!file: $_"
           }
       }
-      unless $!file ~~ :f {
+      if $!file.defined && $!file !~~ :f {
           note "Configuration file ($!file) not found, using default configuration";
           return self.generate-config.(-> | {;})
       }
@@ -85,7 +87,8 @@ class Configuration {
   }
 
   multi method single-run is hidden-from-backtrace {
-      self.conf-from-file;
+      return .() with &!block;
+      self.conf-from-file with $!file;
   }
 
   multi method run is hidden-from-backtrace {
@@ -134,14 +137,22 @@ class Configuration {
       PROCESS::<$CONFIG-OBJECT> //= ::?CLASS.new(:$root);
 
       Map.new:
-          '&single-config-run' => -> :$file, :$code {
+          '&set-config' => -> &block {
+              $*CONFIG-OBJECT = ::?CLASS.new( :$root, :&block )
+          },
+          '&single-config-run' => -> :$file, :$code, :&block {
+              $*CONFIG-OBJECT .= clone(
+                  |( file   => $_ with $file   ),
+                  |( block  => $_ with &block  ),
+              );
               $*CONFIG-OBJECT.single-run:
-                      |($code with $code),
+                  |( $code with $code ),
           },
           '&config-run'        => ->
-              IO()     :$file where { :e || fail "File $_ does not exist" },
+              IO()     :$file,
                        :$watch is copy,
-              Signal() :$signal
+              Signal() :$signal,
+                       :&block,
           {
               $watch = $watch
                   ?? $file
@@ -149,9 +160,10 @@ class Configuration {
                   if $watch ~~ Bool;
 
               $*CONFIG-OBJECT .= clone(
-                  |(file   => $_ with $file),
-                  |(watch  => $_ with $watch),
-                  |(signal => $_ with $signal),
+                  |( file   => $_ with $file   ),
+                  |( watch  => $_ with $watch  ),
+                  |( signal => $_ with $signal ),
+                  |( block  => $_ with &block  ),
               );
               $*CONFIG-OBJECT.run
           },
@@ -208,6 +220,7 @@ This documentation covers the following aspects of the Configuration module:
 =item Handling default configuration file paths
 =item Monitoring specific configuration value changes with config-supply
 =item Configuration Error Handling and Resilience
+=item Testing with Configuration Adjustments
 =item Retrieving the current configuration with get-config
 =item Obtaining configuration without a Supply with single-config-run
 
@@ -428,6 +441,63 @@ This error handling strategy offers several benefits:
 =item C<Visibility>: Provides clear feedback on configuration errors, aiding in quick diagnosis and correction.
 
 By prioritizing continuity and stability, the Configuration module helps maintain the integrity of your application's runtime environment, even in the face of configuration errors. This design choice reflects a commitment to production-grade resilience and operability.
+
+=head1 TESTING WITH CONFIGURATION ADJUSTMENTS
+
+A common use case for dynamic configuration in testing involves feature toggles, which enable or disable application features during runtime. This example demonstrates testing a function, C<access-new-feature>, which behaves differently based on the C<feature_flag> setting in the C<AppConfig> class.
+
+=head2 AppConfig Definition
+
+Define the C<AppConfig> class with a C<feature_flag> attribute. This boolean attribute determines whether a new feature is accessible within the application.
+
+=begin code :lang<raku>
+class AppConfig {
+    has Bool $.feature_flag = False; # Default: Feature is off
+}
+=end code
+
+=head2 Dynamic Configuration Setup for Testing Feature Toggles
+
+We'll dynamically adjust the C<feature_flag> setting to test the application's behavior when the new feature is turned on and off, ensuring that the application responds correctly in both scenarios.
+
+=begin code :lang<raku>
+use Test;
+use YourConfigurationModule;
+
+# Test the `access-new-feature` function with the feature enabled
+set-config -> {
+    config {
+        .feature_flag = True; # Enable the new feature
+    }
+};
+
+is-deeply
+    access-new-feature(),
+    expected-output-with-feature-enabled(),
+    "Feature enabled - Validates access-new-feature with the feature toggle on";
+
+# Test the `access-new-feature` function with the feature disabled
+set-config -> {
+    config {
+        .feature_flag = False; # Ensure the feature is disabled
+    }
+};
+
+is-deeply
+    access-new-feature(),
+    expected-output-with-feature-disabled(),
+    "Feature disabled - Validates access-new-feature with the feature toggle off";
+=end code
+
+In this example, C<set-config> is used to temporarily modify the application's configuration before each test. By toggling the C<feature_flag>, we simulate conditions where the new feature is both available and unavailable. Each test case then verifies that C<access-new-feature> performs as expected under these conditions.
+
+=head2 Benefits of Testing Feature Toggles
+
+=item B<Flexibility>: Easily test the application's behavior with various configuration states without changing the codebase.
+=item B<Isolation>: Keep tests independent to ensure that enabling or disabling a feature for one test doesn't affect others.
+=item B<Coverage>: Ensure that all paths work as expected, increasing the application's reliability.
+
+Testing with dynamic configuration adjustments, especially for feature toggles, is essential for validating application behavior under different feature states. This approach enhances the ability to deliver reliable features and facilitates a smoother transition from development to production.
 
 =head1 RETRIEVING THE CURRENT CONFIGURATION WITH GET-CONFIG
 

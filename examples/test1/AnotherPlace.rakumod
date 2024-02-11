@@ -1,8 +1,8 @@
 use v6.d;
 use Test1Config;
 
-sub another-place is export {
-    say get-config;
+sub another-place(:$print = True) is export {
+    say get-config if $print;
 
     # Emits only when `.a` is changed
     config-supply(*.a).tap: { say ".a has changed: ", $_ }
@@ -12,5 +12,7 @@ sub another-place is export {
 
     # Emits only when `.db` is changed
     config-supply(*.db).tap: { say ".db has changed: ", $_ }
+
+    single-config-run
 }
 

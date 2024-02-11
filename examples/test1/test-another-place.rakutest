@@ -1,0 +1,21 @@
+use Test;
+use Test1Config;
+use AnotherPlace;
+
+for 1 .. 10 -> Int $multiplier {
+  set-config -> {
+    config {
+      .a = 1  * $multiplier;
+      .b = 13 * $multiplier;
+      .c = 3  * $multiplier;
+    }
+  }
+
+  is-deeply
+    another-place(:!print),
+    RootConfig.new(:a(1 * $multiplier), :b(13 * $multiplier), :c(3 * $multiplier)),
+    "$multiplier.fmt("%02d") - Is it possible to test with different configuration?"
+  ;
+}
+
+done-testing

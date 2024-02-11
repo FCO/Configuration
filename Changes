@@ -1,6 +1,7 @@
 Revision history for Configuration
 
 {{$NEXT}}
+    - Enable tests with sef-config()
 
 0.0.10  2024-02-11T02:23:07Z
     - Dies on error on first run

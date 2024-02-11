@@ -37,6 +37,8 @@ This documentation covers the following aspects of the Configuration module:
 
   * Configuration Error Handling and Resilience
 
+  * Testing with Configuration Adjustments
+
   * Retrieving the current configuration with get-config
 
   * Obtaining configuration without a Supply with single-config-run
@@ -295,6 +297,69 @@ This error handling strategy offers several benefits:
   * `Visibility`: Provides clear feedback on configuration errors, aiding in quick diagnosis and correction.
 
 By prioritizing continuity and stability, the Configuration module helps maintain the integrity of your application's runtime environment, even in the face of configuration errors. This design choice reflects a commitment to production-grade resilience and operability.
+
+TESTING WITH CONFIGURATION ADJUSTMENTS
+======================================
+
+A common use case for dynamic configuration in testing involves feature toggles, which enable or disable application features during runtime. This example demonstrates testing a function, `access-new-feature`, which behaves differently based on the `feature_flag` setting in the `AppConfig` class.
+
+AppConfig Definition
+--------------------
+
+Define the `AppConfig` class with a `feature_flag` attribute. This boolean attribute determines whether a new feature is accessible within the application.
+
+```raku
+class AppConfig {
+    has Bool $.feature_flag = False; # Default: Feature is off
+}
+```
+
+Dynamic Configuration Setup for Testing Feature Toggles
+-------------------------------------------------------
+
+We'll dynamically adjust the `feature_flag` setting to test the application's behavior when the new feature is turned on and off, ensuring that the application responds correctly in both scenarios.
+
+```raku
+use Test;
+use YourConfigurationModule;
+
+# Test the `access-new-feature` function with the feature enabled
+set-config -> {
+    config {
+        .feature_flag = True; # Enable the new feature
+    }
+};
+
+is-deeply
+    access-new-feature(),
+    expected-output-with-feature-enabled(),
+    "Feature enabled - Validates access-new-feature with the feature toggle on";
+
+# Test the `access-new-feature` function with the feature disabled
+set-config -> {
+    config {
+        .feature_flag = False; # Ensure the feature is disabled
+    }
+};
+
+is-deeply
+    access-new-feature(),
+    expected-output-with-feature-disabled(),
+    "Feature disabled - Validates access-new-feature with the feature toggle off";
+```
+
+In this example, `set-config` is used to temporarily modify the application's configuration before each test. By toggling the `feature_flag`, we simulate conditions where the new feature is both available and unavailable. Each test case then verifies that `access-new-feature` performs as expected under these conditions.
+
+Benefits of Testing Feature Toggles
+-----------------------------------
+
+  * **Flexibility**: Easily test the application's behavior with various configuration states without changing the codebase.
+
+  * **Isolation**: Keep tests independent to ensure that enabling or disabling a feature for one test doesn't affect others.
+
+  * **Coverage**: Ensure that all paths work as expected, increasing the application's reliability.
+
+Testing with dynamic configuration adjustments, especially for feature toggles, is essential for validating application behavior under different feature states. This approach enhances the ability to deliver reliable features and facilitates a smoother transition from development to production.
 
 RETRIEVING THE CURRENT CONFIGURATION WITH GET-CONFIG
 ====================================================
