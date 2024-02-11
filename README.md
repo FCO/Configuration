@@ -151,7 +151,7 @@ Example: Specifying and Utilizing Default Values
 ------------------------------------------------
 
 ```raku
-class AppConfig does Configuration::Node {
+class AppConfig {
     has Str $.api_key = 'default_api_key';
     has Int $.timeout = 30;
 }

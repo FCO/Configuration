@@ -306,7 +306,7 @@ Upon initialization, if the Configuration module does not find the specified con
 =head2 Example: Specifying and Utilizing Default Values
 
 =begin code :lang<raku>
-class AppConfig does Configuration::Node {
+class AppConfig {
     has Str $.api_key = 'default_api_key';
     has Int $.timeout = 30;
 }
