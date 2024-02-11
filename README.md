@@ -27,11 +27,15 @@ This documentation covers the following aspects of the Configuration module:
 
   * Understanding Configuration Builders
 
+  * Handling Missing Configuration Files with Default Values
+
   * Dynamically reloading configurations
 
   * Handling default configuration file paths
 
   * Monitoring specific configuration value changes with config-supply
+
+  * Configuration Error Handling and Resilience
 
   * Retrieving the current configuration with get-config
 
@@ -105,7 +109,11 @@ The builder class contains read-write (rw) methods corresponding to each attribu
 
 Here's how the process works:
 
-1. **Initialization**: When you call the `config` function, the Configuration module instantiates the corresponding builder object based on your configuration class. 2. **Data Accumulation**: As you use the builder's methods to set configuration values, the builder accumulates this data internally. Each method call adjusts the pending configuration state represented by the builder. 3. **Configuration Instantiation**: Once all necessary configuration data is set, the builder uses this accumulated data to create an instance of your configuration class, effectively materializing the final configuration object.
+  * **Initialization**: When you call the `config` function, the Configuration module instantiates the corresponding builder object based on your configuration class.
+
+  * **Data Accumulation**: As you use the builder's methods to set configuration values, the builder accumulates this data internally. Each method call adjusts the pending configuration state represented by the builder.
+
+  * **Configuration Instantiation**: Once all necessary configuration data is set, the builder uses this accumulated data to create an instance of your configuration class, effectively materializing the final configuration object.
 
 Example: Using a Configuration Builder
 --------------------------------------
@@ -128,6 +136,41 @@ config {
 In this example, `.api_key` and `.timeout` are methods of the `AppConfigBuilder` object provided to the block by the `config` function. These methods set the values that will be used to instantiate `AppConfig` with the provided values.
 
 This builder pattern allows for a clear separation between the definition of configuration data and its usage, enabling more complex configurations to be defined in an intuitive and error-resistant manner.
+
+HANDLING MISSING CONFIGURATION FILES WITH DEFAULT VALUES
+========================================================
+
+The Configuration module is designed to ensure maximum uptime and resilience for your application by employing a robust defaulting mechanism. In situations where a configuration file is expected but does not exist, the module gracefully defaults to using predefined values specified within your configuration class. This feature guarantees that your application can start and run even in the absence of an external configuration file.
+
+Default Value Mechanism
+-----------------------
+
+Upon initialization, if the Configuration module does not find the specified configuration file, it does not halt the application or throw an error. Instead, it proceeds to instantiate the configuration object using the default values declared in the configuration class. This behavior is critical for maintaining application operability, especially in new deployments or environments where the configuration file may not yet be set up.
+
+Example: Specifying and Utilizing Default Values
+------------------------------------------------
+
+```raku
+class AppConfig does Configuration::Node {
+    has Str $.api_key = 'default_api_key';
+    has Int $.timeout = 30;
+}
+
+use Configuration AppConfig;
+```
+
+In this example, `AppConfig` specifies default values for `api_key` and `timeout`. If the Configuration module does not find an external configuration file upon application start, it will create an `AppConfig` object with these default values. Consequently, the application remains functional and uses these defaults as its operational parameters.
+
+Advantages of Using Default Values
+----------------------------------
+
+  * **Flexibility**: Allows the application to run in diverse environments without requiring a configuration file to be present initially.
+
+  * **Simplicity**: Simplifies development and testing by not mandating the existence of a configuration file, especially in early stages of development.
+
+  * **Reliability**: Enhances the reliability of the application by ensuring it can always start up, reducing the risk of failures due to missing configuration data.
+
+This defaulting mechanism underscores the Configuration module's design philosophy of resilience and ease of use, ensuring that applications remain robust and user-friendly across various deployment scenarios.
 
 DYNAMIC CONFIGURATION RELOADING
 ===============================
@@ -223,6 +266,35 @@ react {
     }
 }
 ```
+
+CONFIGURATION ERROR HANDLING AND RESILIENCE
+===========================================
+
+A key feature of the Configuration module is its robust error handling mechanism during runtime configuration changes. When the module detects an error in the configuration—such as invalid data types, missing required fields, or any condition that violates the configuration schema—it is designed to issue a warning rather than terminating the application. This approach ensures that your application remains operational, continuing with the last known correct configuration.
+
+Graceful Error Management
+-------------------------
+
+The Configuration module adopts a non-intrusive error management strategy to maximize application uptime and resilience. In scenarios where a runtime configuration change introduces errors:
+
+  * The module logs a warning detailing the nature of the error, making it visible to developers or system administrators for troubleshooting.
+
+  * It retains the previous valid configuration state, ensuring that the application continues to run with known-good settings.
+
+  * Subsequent attempts to apply configuration changes will follow the same pattern—errors will result in warnings, and only valid changes will be applied.
+
+Benefits of This Approach
+-------------------------
+
+This error handling strategy offers several benefits:
+
+  * `Reliability`: Your application remains operational, avoiding downtime due to configuration issues.
+
+  * `Safety`: Ensures that only valid configurations are applied, protecting the application from unstable states.
+
+  * `Visibility`: Provides clear feedback on configuration errors, aiding in quick diagnosis and correction.
+
+By prioritizing continuity and stability, the Configuration module helps maintain the integrity of your application's runtime environment, even in the face of configuration errors. This design choice reflects a commitment to production-grade resilience and operability.
 
 RETRIEVING THE CURRENT CONFIGURATION WITH GET-CONFIG
 ====================================================

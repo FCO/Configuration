@@ -35,19 +35,13 @@ is %exports<&config>.({
   .int = 42
 }).raku, Conf1.new(:42int).raku, "Passing 42 to int";
 
-{
+throws-like {
   my $error = False;
-  my $*ERR = class :: {
-    method print($msg) {
-      ok $msg.starts-with("Error on configuration file"), "Right error message";
-      $error = True;
-    }
-  }.new;
   is %exports<&config>.({
     .int = "bla"
   }), Nil, "Passing wrong type";
   ok $error, "Called 'note'"
-};
+}, Exception, message => /Assignment/;
 
 is %exports<&config>.({
   .array = 42

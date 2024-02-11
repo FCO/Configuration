@@ -43,6 +43,7 @@ sub generate-builder-class(Configuration::Node:U $node) is cached is export {
                         },
                         STORE => -> $self, $value {
                             if $attr.type !~~ (Positional|Associative) && $value !~~ $attr.type {
+                                note "error trying to assign '$value' into type {$attr.type.^name}";
                                 X::TypeCheck::Assignment.new(got => $value, expected => $attr.type).throw;
                             }
                             %*DATA{$name} := $value<>
