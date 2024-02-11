@@ -1,6 +1,8 @@
 Revision history for Configuration
 
 {{$NEXT}}
+
+0.0.11  2024-02-11T05:58:38Z
     - Enable tests with sef-config()
 
 0.0.10  2024-02-11T02:23:07Z
